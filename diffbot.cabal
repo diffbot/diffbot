@@ -1,0 +1,52 @@
+name:                diffbot
+version:             0.1
+synopsis:            Simple client for the Diffbot API
+description:         Simple client for the Diffbot API
+homepage:            https://github.com/tymmym/diffbot
+bug-reports:         https://github.com/tymmym/diffbot/issues
+license:             BSD3
+license-file:        LICENSE
+author:              Tim Cherganov
+maintainer:          cherganov@gmail.com
+category:            Web
+build-type:          Simple
+cabal-version:       >=1.8
+
+library
+  hs-source-dirs:    src
+
+  exposed-modules:
+      Diffbot
+
+  other-modules:
+      Types
+
+  build-depends:
+      aeson          == 0.6.*
+    , base           >= 4.5 && < 4.7
+    , bytestring     >= 0.9 && < 0.11
+    , conduit        == 1.0.*
+    , data-default   == 0.5.*
+    , http-conduit   == 2.0.*
+    , http-types     == 0.8.*
+    , network        == 2.4.*
+
+  ghc-options:       -Wall -fno-warn-unused-do-bind
+
+test-suite tests
+  type:              exitcode-stdio-1.0
+  hs-source-dirs:    tests
+  main-is:           Tests.hs
+
+  build-depends:
+      base           >= 4.5 && < 4.7
+    , diffbot
+    , test-framework == 0.6.*
+    , test-framework-hunit == 0.3.*
+    , HUnit          == 1.2.*
+
+  ghc-options:       -Wall -fno-warn-unused-do-bind
+
+Source-repository head
+  type:     git
+  location: git://github.com/tymmym/diffbot.git
