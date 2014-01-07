@@ -21,6 +21,18 @@
 -- >         req   = mkRequest token url
 -- >     resp <- diffbot req { requestFields = Just "meta,querystring,images(*)" }
 -- >     print resp
+--
+-- > -- If your content is not publicly available (e.g., behind a
+-- > -- firewall), you can POST markup for analysis directly:
+-- > main = do
+-- >     let token = "11111111111111111111111111111111"
+-- >         url   = "http://www.diffbot.com/our-apis/article"
+-- >         -- Please note that the 'url' parameter is still required, and
+-- >         -- will be used to resolve any relative links contained in the
+-- >         -- markup.
+-- >         req   = mkRequest token url
+-- >     resp <- diffbot req { requestMethod = Post TextPlain "Now is the time for all good robots to come to the aid of their -- oh never mind, run!"
+-- >     print resp
 
 module Diffbot
     ( -- * Perform a request
@@ -28,6 +40,8 @@ module Diffbot
     -- * Datatypes
     , Request(..)
     , Api(..)
+    , Method(..)
+    , ContentType(..)
     -- * Utility functions
     , mkRequest
     -- * Exceptions
@@ -36,16 +50,18 @@ module Diffbot
 
 import           Control.Applicative
 import           Control.Exception (throwIO)
+import           Data.String
 
 import           Data.Aeson
 import           Data.Conduit
 import qualified Data.Conduit.Binary as CB
 import           Data.Default
+import           Network (withSocketsDo)
 import qualified Network.HTTP.Conduit as Http (Request)
 import           Network.HTTP.Conduit hiding (Request)
-import           Network (withSocketsDo)
-import qualified Data.ByteString.Char8 as BC
+import           Network.HTTP.Types.Header
 import           Network.HTTP.Types.URI
+import qualified Data.ByteString.Char8 as BC
 
 import           Types
 
@@ -60,23 +76,34 @@ mkRequest token url = def { requestToken = token
 mkHttpRequest :: Request -> Either HttpException Http.Request
 mkHttpRequest (Request {..}) = do
     req <- parseUrl url
-    return req {responseTimeout = Nothing}
+    case requestMethod of
+      Get ->
+          return req { method = "GET"
+                     , responseTimeout = Nothing
+                     }
+      Post {..} ->
+          return req { method = "POST"
+                     , requestHeaders = [(hContentType, fromString $ show contentType)]
+                     , requestBody = RequestBodyLBS body
+                     , responseTimeout = Nothing
+                     }
   where
-      url   = show requestApi ++ query
-      query = BC.unpack . renderQuery True $ [ ("token", Just $ BC.pack requestToken)
-                                             , ("url",   Just $ BC.pack requestUrl)
-                                             ] ++ mkFieldsQuery requestFields
-                                               ++ mkTimeoutQuery requestTimeout
+      url   = show requestApi ++ BC.unpack query
+      query = renderSimpleQuery True $ [ ("token", fromString requestToken)
+                                       , ("url",   fromString requestUrl)
+                                       ] ++ mkFieldsQuery requestFields
+                                         ++ mkTimeoutQuery requestTimeout
 
 
-mkFieldsQuery :: Maybe String -> [QueryItem]
-mkFieldsQuery (Just s) = [("fields", Just $ BC.pack s)]
+mkFieldsQuery :: Maybe String -> SimpleQuery
+mkFieldsQuery (Just s) = [("fields", fromString s)]
 mkFieldsQuery Nothing  = []
 
 
-mkTimeoutQuery :: Maybe Int -> [QueryItem]
-mkTimeoutQuery (Just t) = [("timeout", Just . BC.pack $ show t)]
+mkTimeoutQuery :: Maybe Int -> SimpleQuery
+mkTimeoutQuery (Just t) = [("timeout", fromString $ show t)]
 mkTimeoutQuery Nothing  = []
+
 
 -- | The 'Object' type contains JSON objects:
 --
@@ -104,6 +131,8 @@ diffbot req =
 
 
 diffbot' :: Http.Request -> IO (Maybe Object)
-diffbot' req = withManager $ \manager -> do
+diffbot' req = do
+  print req
+  withManager $ \manager -> do
     response <- http req manager
     decode <$> (responseBody response $$+- CB.sinkLbs)
