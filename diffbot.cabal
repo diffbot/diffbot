@@ -19,7 +19,7 @@ library
       Diffbot
 
   other-modules:
-      Types
+      Types, Article, FrontPage, Image, Product
 
   build-depends:
       aeson          == 0.6.*
@@ -40,6 +40,7 @@ test-suite tests
 
   build-depends:
       base           >= 4.5 && < 4.7
+    , bytestring     >= 0.9 && < 0.11
     , data-default   == 0.5.*
     , diffbot
     , HUnit          == 1.2.*

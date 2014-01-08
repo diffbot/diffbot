@@ -1,57 +1,64 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Types where
 
-import           Data.Default
+import           Data.String
+
 import qualified Data.ByteString.Lazy as BL
+import qualified Network.HTTP.Conduit as Http (Request, method)
+import           Network.HTTP.Conduit hiding (Request, method)
+import           Network.HTTP.Types.Header
+import           Network.HTTP.Types.URI
 
 
 -- | All information on how to connect to a Diffbot and what should be
 -- sent in the request.
-data Request = Request
-    { requestApi      :: Api
-
-    , requestMethod   :: Method
-    -- ^ HTTP request method, e.g. GET, POST.
-
-    , requestToken    :: String
-    -- ^ Developer token.
-
-    , requestUrl      :: String
-    -- ^ URL to process.
-
-    , requestFields   :: Maybe String
-    -- ^ Used to control which fields are returned by the API.
-
-    , requestTimeout  :: Maybe Int
-    -- ^ Set a value in milliseconds to terminate the response.
-
-    , requestCallback :: Maybe String
-    -- ^ Use for jsonp requests. Needed for cross-domain ajax.
-    } deriving Show
+class Request a where
+    api           :: a -> String
+    token         :: a -> String
+    url           :: a -> String
+    mkRequest     :: String -> String -> a
+    mkHttpRequest :: a -> Either HttpException Http.Request
 
 
-instance Default Request where
-  def = Request { requestApi      = Article
-                , requestMethod   = Get
-                , requestToken    = ""
-                , requestUrl      = ""
-                , requestFields   = Nothing
-                , requestTimeout  = Nothing
-                , requestCallback = Nothing
-                }
+-- | Used to control which fields are returned by the API.
+class Fields a where
+    fields :: a -> Maybe String
+    setFields :: Maybe String -> a -> a
 
 
-data Api = Article
-         | Frontpage
-         | Image
-           deriving Eq
+mkFieldsQuery :: Maybe String -> SimpleQuery
+mkFieldsQuery (Just s) = [("fields", fromString s)]
+mkFieldsQuery Nothing  = []
 
 
-instance Show Api where
-    show Article   = "http://api.diffbot.com/v2/article"
-    show Frontpage = "http://www.diffbot.com/api/frontpage"
-    show Image     = "http://api.diffbot.com/v2/image"
+class Post a where
+    method :: a -> Method
+    setMethod :: Method -> a -> a
+
+
+addContent :: Method -> Http.Request -> Http.Request
+addContent m req =
+    case m of
+      Get ->
+          req { Http.method = "GET" }  -- FIXME: maybe without this?
+      Post {..} ->
+          req { Http.method = "POST"
+              , requestHeaders = [(hContentType, fromString $ show contentType)]
+              , requestBody = RequestBodyLBS body
+              , responseTimeout = Nothing
+              }
+
+
+class Timeout a where
+    timeout :: a -> Maybe Int
+    setTimeout :: Maybe Int -> a -> a
+
+
+mkTimeoutQuery :: Maybe Int -> SimpleQuery
+mkTimeoutQuery (Just t) = [("timeout", fromString $ show t)]
+mkTimeoutQuery Nothing  = []
 
 
 -- | HTTP reequest method.
@@ -62,6 +69,14 @@ data Method = Get
                    -- ^ Markup to analyze.
                    }
               deriving Show
+
+
+-- data Content = Content
+--     { contentType :: ContentType
+--     -- ^ Type of content.
+--     , contentData :: BL.ByteString
+--     -- ^ Content to analyze.
+--     }
 
 
 data ContentType = TextPlain
