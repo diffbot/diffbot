@@ -1,13 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module FrontPage where
 
-import           Data.String
-
 import           Data.Default
-import qualified Data.ByteString.Char8 as BC
-import           Network.HTTP.Conduit hiding (Request, method)
-import           Network.HTTP.Types.URI
 
 import           Types
 
@@ -20,41 +13,40 @@ data FrontPage = FrontPage
     -- ^ Returns all content from page, including navigation and
     -- similar links that the Diffbot visual processing engine
     -- considers less important/non-core.
-    , frontPageMethod :: Method
+    , frontPageContent :: Maybe Content
     }
 
 
+instance Post FrontPage where
+    content        = frontPageContent
+    setContent c f = f { frontPageContent = c }
+
+
 instance Default FrontPage where
-    def = FrontPage { frontPageToken  = ""
-                    , frontPageUrl    = ""
-                    , frontPageAll    = False
-                    , frontPageMethod = Get
+    def = FrontPage { frontPageToken   = ""
+                    , frontPageUrl     = ""
+                    , frontPageAll     = False
+                    , frontPageContent = Nothing
                     }
 
 
 instance Request FrontPage where
-    api _         = "http://www.diffbot.com/api/frontpage"
-    token         = frontPageToken
-    url           = frontPageUrl
-    mkRequest t u = def { frontPageToken = t
-                        , frontPageUrl   = u
-                        }
-    mkHttpRequest f = do
-        req <- parseUrl u
-        return $ addContent (method f) req { responseTimeout = Nothing }
-      where
-        u     = api f ++ BC.unpack query
-        query = renderQuery True $ [ ("token",  Just . fromString $ token f)
-                                   , ("url",    Just . fromString $ url f)
-                                   , ("format", Just "json")
-                                   ] ++ mkAllQuery (frontPageAll f)
-        mkAllQuery b = if b then [ ("all", Nothing) ] else []
+    toReq r = Req { reqApi     = "http://www.diffbot.com/api/frontpage"
+                  , reqToken   = frontPageToken r
+                  , reqUrl     = frontPageUrl r
+                  , reqContent = content r
+                  , reqQuery   = mkFrontPageQuery r
+                  }
 
 
-instance Post FrontPage where
-    method = frontPageMethod
-    setMethod m a = a { frontPageMethod = m }
+mkFrontPageQuery :: FrontPage -> [(String, Maybe String)]
+mkFrontPageQuery f = allQuery ++ formatQuery
+  where
+    allQuery    = if frontPageAll f then [("all", Nothing)] else []
+    formatQuery = [ ("format", Just "json") ]
 
 
 mkFrontPage :: String -> String -> FrontPage
-mkFrontPage = mkRequest
+mkFrontPage token url = def { frontPageToken = token
+                            , frontPageUrl   = url
+                            }

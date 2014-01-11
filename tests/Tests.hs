@@ -56,8 +56,8 @@ getIsJust mk = do
 postPlainIsJust :: (Request a, Post a) => (String -> String -> a) -> Assertion
 postPlainIsJust mk = do
     let req = mk token url
-        m   = Post TextPlain "Diffbot\8217s human wranglers are proud today to announce the release of our newest product: an API for\8230 products!"
-    resp <- diffbot $ setMethod m req
+        c   = Content TextPlain "Diffbot\8217s human wranglers are proud today to announce the release of our newest product: an API for\8230 products!"
+    resp <- diffbot $ setContent (Just c) req
     assertBool "Nothing" $ isJust resp
 
 
@@ -65,8 +65,8 @@ postHtmlIsJust :: (Request a, Post a) => (String -> String -> a) -> Assertion
 postHtmlIsJust mk = do
     let url = "http://www.haskell.org/haskellwiki/Haskell"
         req = mk token url
-        m   = Post TextHtml html
-    resp <- diffbot $ setMethod m req
+        c   = Content TextHtml html
+    resp <- diffbot $ setContent (Just c) req
     assertBool "Nothing" $ isJust resp
 
 

@@ -1,13 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Article where
 
-import           Data.String
-
 import           Data.Default
-import qualified Data.ByteString.Char8 as BC
-import           Network.HTTP.Conduit hiding (Request, method)
-import           Network.HTTP.Types.URI
 
 import Types
 
@@ -21,7 +14,7 @@ data Article = Article
     , articleUrl      :: String
     -- ^ URL to process.
 
-    , articleMethod   :: Method
+    , articleContent   :: Maybe Content
     -- ^ HTTP request method, e.g. GET, POST.
 
     , articleFields   :: Maybe String
@@ -32,45 +25,40 @@ data Article = Article
     }
 
 
+instance Fields Article where
+    fields        = articleFields
+    setFields f a = a { articleFields = f }
+
+
+instance Post Article where
+    content        = articleContent
+    setContent c a = a { articleContent = c }
+
+
+instance Timeout Article where
+    timeout        = articleTimeout
+    setTimeout t a = a { articleTimeout = t }
+
+
 instance Default Article where
     def = Article { articleToken    = ""
                   , articleUrl      = ""
-                  , articleMethod   = Get
+                  , articleContent  = Nothing
                   , articleFields   = Nothing
                   , articleTimeout  = Nothing
                   }
 
 
 instance Request Article where
-    api _         = "http://api.diffbot.com/v2/article"
-    token         = articleToken
-    url           = articleUrl
-    mkRequest t u = def { articleToken = t
-                        , articleUrl   = u
-                        }
-    mkHttpRequest a = do
-        req <- parseUrl u
-        return $ addContent (method a) req { responseTimeout = Nothing }
-      where
-        u     = api a ++ BC.unpack query
-        query = renderSimpleQuery True $ [ ("token", fromString $ token a)
-                                         , ("url",   fromString $ url a)
-                                       ] ++ mkFieldsQuery (fields a)
-                                         ++ mkTimeoutQuery (timeout a)
+    toReq r = Req { reqApi     = "http://api.diffbot.com/v2/article"
+                  , reqToken   = articleToken r
+                  , reqUrl     = articleUrl r
+                  , reqContent = content r
+                  , reqQuery   = fieldsQuery r ++ timeoutQuery r
+                  }
 
-
-instance Fields Article where
-    fields = articleFields
-    setFields f a = a { articleFields = f }
-
-
-instance Post Article where
-    method = articleMethod
-    setMethod m a = a { articleMethod = m }
-
-instance Timeout Article where
-    timeout = articleTimeout
-    setTimeout t a = a { articleTimeout = t }
 
 mkArticle :: String -> String -> Article
-mkArticle = mkRequest
+mkArticle token url = def { articleToken = token
+                          , articleUrl   = url
+                          }

@@ -38,9 +38,10 @@
 -- >         -- will be used to resolve any relative links contained in the
 -- >         -- markup.
 -- >         req   = mkArticle token url
--- >         m     = Post TextPlain "Now is the time for all good robots to come to the aid of their -- oh never mind, run!"
--- >     resp <- diffbot $ setMethod m req
+-- >         c     = Content TextPlain "Now is the time for all good robots to come to the aid of their -- oh never mind, run!"
+-- >     resp <- diffbot $ setContent (Just c) req
 -- >     print resp
+
 
 module Diffbot
     (  -- * Perform a request
@@ -58,7 +59,7 @@ module Diffbot
     , Post(..)
     , Timeout(..)
     -- * Datatypes
-    , Method(..)
+    , Content(..)
     , ContentType(..)
     -- * Exceptions
     , HttpException(..)
@@ -66,19 +67,24 @@ module Diffbot
 
 import           Control.Applicative
 import           Control.Exception (throwIO)
+import qualified Data.ByteString.Char8 as BC
+import           Data.String
 
 import           Data.Aeson
 import           Data.Conduit
 import qualified Data.Conduit.Binary as CB
 import           Network (withSocketsDo)
-import qualified Network.HTTP.Conduit as Http (Request)
+import qualified Network.HTTP.Conduit as Http (Request, method)
 import           Network.HTTP.Conduit hiding (Request, method)
+import           Network.HTTP.Types.Header
+import           Network.HTTP.Types.QueryLike
+import           Network.HTTP.Types.URI
 
 import           Types
 import           Article
 import           FrontPage
 import           Image
-import           Product
+-- import           Product
 
 -- | The 'Object' type contains JSON objects:
 --
@@ -101,12 +107,36 @@ import           Product
 -- >>> getInfo resp
 -- Just "Diffbot\8217s New Product API Teaches Robots to Shop Online, by John Davi"
 diffbot :: Request a => a -> IO (Maybe Object)
-diffbot req =
-    withSocketsDo . either throwIO diffbot' $ mkHttpRequest req
+diffbot request =
+    withSocketsDo . either throwIO diffbot' $ mkHttpRequest request
 
 
 diffbot' :: Http.Request -> IO (Maybe Object)
-diffbot' req = do
+diffbot' req =
     withManager $ \manager -> do
         response <- http req manager
         decode <$> (responseBody response $$+- CB.sinkLbs)
+
+
+mkHttpRequest :: Request a => a -> Either HttpException Http.Request
+mkHttpRequest request = do
+    httpRequest <- parseUrl u
+    return $ addContent reqContent httpRequest { responseTimeout = Nothing }
+  where
+    Req {..} = toReq request
+    u     = reqApi ++ BC.unpack query
+    query = renderQuery True . toQuery $ [ ("token", Just reqToken)
+                                         , ("url",   Just reqUrl)
+                                         ] ++ reqQuery
+
+
+addContent :: Maybe Content -> Http.Request -> Http.Request
+addContent m req =
+    case m of
+      Nothing ->
+          req { Http.method =    "GET" }
+      Just (Content {..}) ->
+          req { Http.method    = "POST"
+              , requestHeaders = [(hContentType, fromString $ show contentType)]
+              , requestBody    = RequestBodyLBS contentData
+              }
