@@ -37,6 +37,15 @@ tests = [ testGroup "Article"
           [ testCase "getIsJust" (getIsJust mkImage)
           , testCase "emptyToken" $ emptyToken (def :: Image)
           ]
+        , testGroup "Product"
+          [ testCase "getIsJust" $ getIsJust mkProduct
+          , testCase "emptyToken" $ emptyToken (mkProduct "" "")
+          ]
+        ,
+          testGroup "Classifier"
+          [ testCase "getIsJust" $ getIsJust mkClassifier
+          , testCase "emptyToken" $ emptyToken (mkClassifier "" "")
+          ]
         ]
 
 

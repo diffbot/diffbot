@@ -1,8 +1,8 @@
 module FrontPage where
 
-import           Data.Default
+import Data.Default
 
-import           Types
+import Types
 
 -- | Takes in a multifaceted \"homepage\" and returns individual page
 -- elements.

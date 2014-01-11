@@ -1,6 +1,6 @@
 module Article where
 
-import           Data.Default
+import Data.Default
 
 import Types
 

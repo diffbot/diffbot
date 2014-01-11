@@ -1,8 +1,8 @@
 module Image where
 
-import           Data.Default
+import Data.Default
 
-import           Types
+import Types
 
 
 -- | Analyzes a web page and returns its primary image(s).

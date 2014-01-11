@@ -44,16 +44,22 @@
 
 
 module Diffbot
-    (  -- * Perform a request
+    ( -- * Perform a request
       diffbot
     -- * API
-    , Request
     , Article
     , mkArticle
     , FrontPage
     , mkFrontPage
+    , frontPageAll
     , Image
     , mkImage
+    , Product
+    , mkProduct
+    , Classifier
+    , mkClassifier
+    , classifierMode
+    , classifierStats
     -- * Type classes
     , Fields(..)
     , Post(..)
@@ -61,6 +67,9 @@ module Diffbot
     -- * Datatypes
     , Content(..)
     , ContentType(..)
+    -- * Internal
+    , Request(..)
+    , Req(..)
     -- * Exceptions
     , HttpException(..)
     ) where
@@ -84,7 +93,8 @@ import           Types
 import           Article
 import           FrontPage
 import           Image
--- import           Product
+import           Product
+import           Classifier
 
 -- | The 'Object' type contains JSON objects:
 --

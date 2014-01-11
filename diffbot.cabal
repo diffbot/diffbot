@@ -19,7 +19,7 @@ library
       Diffbot
 
   other-modules:
-      Types, Article, FrontPage, Image, Product
+      Types, Article, FrontPage, Image, Product, Classifier
 
   build-depends:
       aeson          == 0.6.*
