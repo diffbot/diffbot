@@ -7,9 +7,7 @@ import Types
 -- | Takes in a multifaceted \"homepage\" and returns individual page
 -- elements.
 data FrontPage = FrontPage
-    { frontPageToken  :: String
-    , frontPageUrl    :: String
-    , frontPageAll    :: Bool
+    { frontPageAll    :: Bool
     -- ^ Returns all content from page, including navigation and
     -- similar links that the Diffbot visual processing engine
     -- considers less important/non-core.
@@ -23,17 +21,13 @@ instance Post FrontPage where
 
 
 instance Default FrontPage where
-    def = FrontPage { frontPageToken   = ""
-                    , frontPageUrl     = ""
-                    , frontPageAll     = False
+    def = FrontPage { frontPageAll     = False
                     , frontPageContent = Nothing
                     }
 
 
 instance Request FrontPage where
     toReq r = Req { reqApi     = "http://www.diffbot.com/api/frontpage"
-                  , reqToken   = frontPageToken r
-                  , reqUrl     = frontPageUrl r
                   , reqContent = content r
                   , reqQuery   = mkFrontPageQuery r
                   }
@@ -46,7 +40,5 @@ mkFrontPageQuery f = allQuery ++ formatQuery
     formatQuery = [ ("format", Just "json") ]
 
 
-mkFrontPage :: String -> String -> FrontPage
-mkFrontPage token url = def { frontPageToken = token
-                            , frontPageUrl   = url
-                            }
+mkFrontPage :: FrontPage
+mkFrontPage = def

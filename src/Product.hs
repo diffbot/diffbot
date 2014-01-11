@@ -5,9 +5,7 @@ import Types
 -- | Analyzes a shopping or e-commerce product page and returns
 -- information on the product.
 data Product = Product
-    { productToken   :: String
-    , productUrl     :: String
-    , productFields  :: Maybe String
+    { productFields  :: Maybe String
     , productTimeout :: Maybe Int
     }
 
@@ -24,16 +22,12 @@ instance Timeout Product where
 
 instance Request Product where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/product"
-                  , reqToken   = productToken r
-                  , reqUrl     = productUrl r
                   , reqContent = Nothing
                   , reqQuery   = fieldsQuery r ++ timeoutQuery r
                   }
 
 
-mkProduct :: String -> String -> Product
-mkProduct token url = Product { productToken   = token
-                              , productUrl     = url
-                              , productFields  = Nothing
-                              , productTimeout = Nothing
-                              }
+mkProduct :: Product
+mkProduct = Product { productFields  = Nothing
+                    , productTimeout = Nothing
+                    }

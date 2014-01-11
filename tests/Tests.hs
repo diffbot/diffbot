@@ -6,7 +6,7 @@ import qualified Control.Exception as E
 import           Data.Maybe
 import qualified Data.ByteString.Lazy as BL
 
-import           Data.Default
+--import           Data.Default
 import           Test.Framework
 import           Test.Framework.Providers.HUnit
 import           Test.HUnit hiding (Test, path)
@@ -24,27 +24,27 @@ tests = [ testGroup "Article"
           [ testCase "getIsJust" $ getIsJust mkArticle
           , testCase "postPlainIsJust" $ postPlainIsJust mkArticle
           , testCase "postHtmlIsJust" $ postHtmlIsJust mkArticle
-          , testCase "emptyToken" $ emptyToken (def :: Article)
+          , testCase "emptyToken" $ emptyToken mkArticle
           ]
         , testGroup "FrontPage"
           [ testCase "getIsJust" (getIsJust mkFrontPage)
           --  FIXME: POST request for FrontPage API
           -- , testCase "postPlainIsJust" (postPlainIsJust mkFrontPage)
           -- , testCase "postHtmlIsJust" (postHtmlIsJust mkFrontPage)
-          , testCase "emptyToken" $ emptyToken (def :: FrontPage)
+          , testCase "emptyToken" $ emptyToken mkFrontPage
           ]
         , testGroup "Image"
           [ testCase "getIsJust" (getIsJust mkImage)
-          , testCase "emptyToken" $ emptyToken (def :: Image)
+          , testCase "emptyToken" $ emptyToken mkImage
           ]
         , testGroup "Product"
           [ testCase "getIsJust" $ getIsJust mkProduct
-          , testCase "emptyToken" $ emptyToken (mkProduct "" "")
+          , testCase "emptyToken" $ emptyToken mkProduct
           ]
         ,
           testGroup "Classifier"
           [ testCase "getIsJust" $ getIsJust mkClassifier
-          , testCase "emptyToken" $ emptyToken (mkClassifier "" "")
+          , testCase "emptyToken" $ emptyToken mkClassifier
           ]
         ]
 
@@ -55,33 +55,30 @@ token = "1405030fcd9385c3f907472839205908"
 url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
 
 
-getIsJust :: Request a => (String -> String -> a) -> Assertion
+getIsJust :: Request a => a -> Assertion
 getIsJust mk = do
-    let req = mk token url
-    resp <- diffbot req
+    resp <- diffbot token url mk
     assertBool "Nothing" $ isJust resp
 
 
-postPlainIsJust :: (Request a, Post a) => (String -> String -> a) -> Assertion
+postPlainIsJust :: (Request a, Post a) => a -> Assertion
 postPlainIsJust mk = do
-    let req = mk token url
-        c   = Content TextPlain "Diffbot\8217s human wranglers are proud today to announce the release of our newest product: an API for\8230 products!"
-    resp <- diffbot $ setContent (Just c) req
+    let c   = Content TextPlain "Diffbot\8217s human wranglers are proud today to announce the release of our newest product: an API for\8230 products!"
+    resp <- diffbot token url $ setContent (Just c) mk
     assertBool "Nothing" $ isJust resp
 
 
-postHtmlIsJust :: (Request a, Post a) => (String -> String -> a) -> Assertion
+postHtmlIsJust :: (Request a, Post a) => a -> Assertion
 postHtmlIsJust mk = do
     let url = "http://www.haskell.org/haskellwiki/Haskell"
-        req = mk token url
         c   = Content TextHtml html
-    resp <- diffbot $ setContent (Just c) req
+    resp <- diffbot token url $ setContent (Just c) mk
     assertBool "Nothing" $ isJust resp
 
 
 emptyToken :: Request a => a -> Assertion
 emptyToken req = do
-    resp <- diffbot req
+    resp <- diffbot "" "" req
     assertBool "Nothing" $ isJust resp
     `E.catch` (\(StatusCodeException s _ _) ->
                    assertBool "Another exception" $ statusCode s == 401)

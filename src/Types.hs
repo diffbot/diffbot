@@ -15,8 +15,6 @@ class Request a where
 
 data Req = Req
     { reqApi     :: String
-    , reqToken   :: String
-    , reqUrl     :: String
     , reqContent :: Maybe Content
     , reqQuery   :: [(String, Maybe String)]
     }

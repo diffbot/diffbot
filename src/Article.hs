@@ -8,14 +8,8 @@ import Types
 -- | Used to extract clean article text from news article, blog post
 -- and similar text-heavy web pages.
 data Article = Article
-    { articleToken    :: String
-    -- ^ Developer token.
-
-    , articleUrl      :: String
-    -- ^ URL to process.
-
-    , articleContent   :: Maybe Content
-    -- ^ HTTP request method, e.g. GET, POST.
+    { articleContent   :: Maybe Content
+    -- ^ Content.
 
     , articleFields   :: Maybe String
     -- ^ Used to control which fields are returned by the API.
@@ -41,9 +35,7 @@ instance Timeout Article where
 
 
 instance Default Article where
-    def = Article { articleToken    = ""
-                  , articleUrl      = ""
-                  , articleContent  = Nothing
+    def = Article { articleContent  = Nothing
                   , articleFields   = Nothing
                   , articleTimeout  = Nothing
                   }
@@ -51,14 +43,10 @@ instance Default Article where
 
 instance Request Article where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/article"
-                  , reqToken   = articleToken r
-                  , reqUrl     = articleUrl r
                   , reqContent = content r
                   , reqQuery   = fieldsQuery r ++ timeoutQuery r
                   }
 
 
-mkArticle :: String -> String -> Article
-mkArticle token url = def { articleToken = token
-                          , articleUrl   = url
-                          }
+mkArticle :: Article
+mkArticle = def

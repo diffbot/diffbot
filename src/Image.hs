@@ -7,9 +7,7 @@ import Types
 
 -- | Analyzes a web page and returns its primary image(s).
 data Image = Image
-    { imageToken   :: String
-    , imageUrl     :: String
-    , imageFields  :: Maybe String
+    { imageFields  :: Maybe String
     , imageTimeout :: Maybe Int
     }
 
@@ -25,23 +23,17 @@ instance Timeout Image where
 
 
 instance Default Image where
-    def = Image { imageToken   = ""
-                , imageUrl     = ""
-                , imageFields  = Nothing
+    def = Image { imageFields  = Nothing
                 , imageTimeout = Nothing
                 }
 
 
 instance Request Image where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/image"
-                  , reqToken   = imageToken r
-                  , reqUrl     = imageUrl r
                   , reqContent = Nothing
                   , reqQuery   = fieldsQuery r ++ timeoutQuery r
                   }
 
 
-mkImage :: String -> String -> Image
-mkImage token url = def { imageToken = token
-                        , imageUrl   = url
-                        }
+mkImage :: Image
+mkImage = def

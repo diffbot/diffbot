@@ -3,9 +3,7 @@ module Classifier where
 import Types
 
 data Classifier = Classifier
-    { classifierToken  :: String
-    , classifierUrl    :: String
-    , classifierFields :: Maybe String
+    { classifierFields :: Maybe String
     , classifierMode   :: Maybe String
     , classifierStats  :: Bool
     }
@@ -18,8 +16,6 @@ instance Fields Classifier where
 
 instance Request Classifier where
     toReq a = Req { reqApi     = "http://api.diffbot.com/v2/analyze"
-                  , reqToken   = classifierToken a
-                  , reqUrl     = classifierUrl a
                   , reqContent = Nothing
                   , reqQuery   = fieldsQuery a ++ mkClassifierQuery a
                   }
@@ -31,10 +27,8 @@ mkClassifierQuery a = statsQuery ++ modeQuery
     modeQuery  = mkQuery "mode" $ classifierMode a
 
 
-mkClassifier :: String -> String -> Classifier
-mkClassifier token url = Classifier { classifierToken  = token
-                                    , classifierUrl    = url
-                                    , classifierFields = Nothing
-                                    , classifierMode   = Nothing
-                                    , classifierStats  = False
-                                    }
+mkClassifier :: Classifier
+mkClassifier = Classifier { classifierFields = Nothing
+                          , classifierMode   = Nothing
+                          , classifierStats  = False
+                          }

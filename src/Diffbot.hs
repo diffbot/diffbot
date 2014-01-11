@@ -47,15 +47,20 @@ module Diffbot
     ( -- * Perform a request
       diffbot
     -- * API
+    -- ** Article
     , Article
     , mkArticle
+    -- ** Front Page
     , FrontPage
     , mkFrontPage
     , frontPageAll
+    -- ** Image
     , Image
     , mkImage
+    -- ** Product
     , Product
     , mkProduct
+    -- ** Page Classifier
     , Classifier
     , mkClassifier
     , classifierMode
@@ -116,9 +121,13 @@ import           Classifier
 --
 -- >>> getInfo resp
 -- Just "Diffbot\8217s New Product API Teaches Robots to Shop Online, by John Davi"
-diffbot :: Request a => a -> IO (Maybe Object)
-diffbot request =
-    withSocketsDo . either throwIO diffbot' $ mkHttpRequest request
+diffbot :: Request a
+        => String     -- ^ Developer token.
+        -> String     -- ^ URL to process.
+        -> a          -- ^ API
+        -> IO (Maybe Object)
+diffbot token url request =
+    withSocketsDo . either throwIO diffbot' $ mkHttpRequest token url request
 
 
 diffbot' :: Http.Request -> IO (Maybe Object)
@@ -128,15 +137,16 @@ diffbot' req =
         decode <$> (responseBody response $$+- CB.sinkLbs)
 
 
-mkHttpRequest :: Request a => a -> Either HttpException Http.Request
-mkHttpRequest request = do
+mkHttpRequest :: Request a => String -> String -> a
+              -> Either HttpException Http.Request
+mkHttpRequest token url request = do
     httpRequest <- parseUrl u
     return $ addContent reqContent httpRequest { responseTimeout = Nothing }
   where
     Req {..} = toReq request
     u     = reqApi ++ BC.unpack query
-    query = renderQuery True . toQuery $ [ ("token", Just reqToken)
-                                         , ("url",   Just reqUrl)
+    query = renderQuery True . toQuery $ [ ("token", Just token)
+                                         , ("url",   Just url)
                                          ] ++ reqQuery
 
 
