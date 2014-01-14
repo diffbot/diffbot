@@ -1,6 +1,7 @@
 module Article where
 
 import Data.Default
+import Data.Maybe
 
 import Types
 
@@ -44,7 +45,9 @@ instance Default Article where
 instance Request Article where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/article"
                   , reqContent = content r
-                  , reqQuery   = fieldsQuery r ++ timeoutQuery r
+                  , reqQuery   = catMaybes [ fieldsQuery r
+                                           , timeoutQuery r
+                                           ]
                   }
 
 

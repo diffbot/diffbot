@@ -46,6 +46,9 @@ tests = [ testGroup "Article"
           [ testCase "getIsJust" $ getIsJust mkClassifier
           , testCase "emptyToken" $ emptyToken mkClassifier
           ]
+        , testGroup "Crawlbot"
+          [ testCase "crawlIsJust" $ crawlIsJust (mkCrawlbot "sampleDiffbotCrawl" Nothing) -- ["http://blog.diffbot.com"])
+          ]
         ]
 
 
@@ -82,6 +85,12 @@ emptyToken req = do
     assertBool "Nothing" $ isJust resp
     `E.catch` (\(StatusCodeException s _ _) ->
                    assertBool "Another exception" $ statusCode s == 401)
+
+
+crawlIsJust :: Crawlbot -> IO ()
+crawlIsJust mk = do
+    resp <- crawlbot token mk
+    assertBool "Nothing" $ isJust resp
 
 
 html :: BL.ByteString

@@ -1,6 +1,7 @@
 module Product where
 
 import Types
+import Data.Maybe
 
 -- | Analyzes a shopping or e-commerce product page and returns
 -- information on the product.
@@ -23,7 +24,9 @@ instance Timeout Product where
 instance Request Product where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/product"
                   , reqContent = Nothing
-                  , reqQuery   = fieldsQuery r ++ timeoutQuery r
+                  , reqQuery   = catMaybes [ fieldsQuery r
+                                           , timeoutQuery r
+                                           ]
                   }
 
 

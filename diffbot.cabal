@@ -19,7 +19,7 @@ library
       Diffbot
 
   other-modules:
-      Types, Article, FrontPage, Image, Product, Classifier
+      Types, Article, FrontPage, Image, Product, Classifier, Crawlbot
 
   build-depends:
       aeson          == 0.6.*
@@ -30,6 +30,7 @@ library
     , http-conduit   == 2.0.*
     , http-types     == 0.8.*
     , network        == 2.4.*
+    , time           == 1.4.*
 
   ghc-options:       -Wall -fno-warn-unused-do-bind
 

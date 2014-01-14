@@ -1,6 +1,7 @@
 module FrontPage where
 
 import Data.Default
+import Data.Maybe
 
 import Types
 
@@ -34,10 +35,9 @@ instance Request FrontPage where
 
 
 mkFrontPageQuery :: FrontPage -> [(String, Maybe String)]
-mkFrontPageQuery f = allQuery ++ formatQuery
-  where
-    allQuery    = if frontPageAll f then [("all", Nothing)] else []
-    formatQuery = [ ("format", Just "json") ]
+mkFrontPageQuery f = catMaybes [ mkQueryBool "all"    (frontPageAll f)
+                               , mkQuery     "format" (Just "json")
+                               ]
 
 
 mkFrontPage :: FrontPage

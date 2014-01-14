@@ -1,5 +1,7 @@
 module Classifier where
 
+import Data.Maybe
+
 import Types
 
 data Classifier = Classifier
@@ -17,14 +19,15 @@ instance Fields Classifier where
 instance Request Classifier where
     toReq a = Req { reqApi     = "http://api.diffbot.com/v2/analyze"
                   , reqContent = Nothing
-                  , reqQuery   = fieldsQuery a ++ mkClassifierQuery a
+                  , reqQuery   = mkClassifierQuery a
                   }
 
+
 mkClassifierQuery :: Classifier -> [(String, Maybe String)]
-mkClassifierQuery a = statsQuery ++ modeQuery
-  where
-    statsQuery = if classifierStats a then [("stats", Nothing)] else []
-    modeQuery  = mkQuery "mode" $ classifierMode a
+mkClassifierQuery a = catMaybes [ fieldsQuery a
+                                , mkQueryBool "stats" (classifierStats a)
+                                , mkQuery     "mode"  (classifierMode a)
+                                ]
 
 
 mkClassifier :: Classifier

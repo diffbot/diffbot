@@ -46,6 +46,7 @@
 module Diffbot
     ( -- * Perform a request
       diffbot
+    , diffbotP
     -- * API
     -- ** Article
     , Article
@@ -65,6 +66,12 @@ module Diffbot
     , mkClassifier
     , classifierMode
     , classifierStats
+    -- * Crawlbot
+    , crawlbot
+    , crawlbotP
+    , Crawlbot(..)
+    , mkCrawlbot
+    , Limit(..)
     -- * Type classes
     , Fields(..)
     , Post(..)
@@ -72,6 +79,7 @@ module Diffbot
     -- * Datatypes
     , Content(..)
     , ContentType(..)
+    , Proxy(..)
     -- * Internal
     , Request(..)
     , Req(..)
@@ -82,6 +90,7 @@ module Diffbot
 import           Control.Applicative
 import           Control.Exception (throwIO)
 import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Lazy as BL
 import           Data.String
 
 import           Data.Aeson
@@ -89,7 +98,7 @@ import           Data.Conduit
 import qualified Data.Conduit.Binary as CB
 import           Network (withSocketsDo)
 import qualified Network.HTTP.Conduit as Http (Request, method)
-import           Network.HTTP.Conduit hiding (Request, method)
+import           Network.HTTP.Conduit hiding (Request, Response, method)
 import           Network.HTTP.Types.Header
 import           Network.HTTP.Types.QueryLike
 import           Network.HTTP.Types.URI
@@ -100,6 +109,9 @@ import           FrontPage
 import           Image
 import           Product
 import           Classifier
+import           Crawlbot
+
+
 
 -- | The 'Object' type contains JSON objects:
 --
@@ -127,27 +139,57 @@ diffbot :: Request a
         -> a          -- ^ API
         -> IO (Maybe Object)
 diffbot token url request =
-    withSocketsDo . either throwIO diffbot' $ mkHttpRequest token url request
+    bot Nothing request [ ("token", Just token)
+                        , ("url",   Just url)
+                        ]
 
 
-diffbot' :: Http.Request -> IO (Maybe Object)
-diffbot' req =
+diffbotP :: Request a
+         => String     -- ^ Developer token.
+         -> String     -- ^ URL to process.
+         -> Maybe Proxy
+         -> a          -- ^ API
+         -> IO (Maybe Object)
+diffbotP token url p request =
+    bot p request [ ("token", Just token)
+                  , ("url",   Just url)
+                  ]
+
+
+crawlbot :: String -> Crawlbot -> IO (Maybe Response)
+crawlbot token crawl =
+    bot Nothing crawl [("token", Just token)]
+
+
+crawlbotP :: String -> Maybe Proxy -> Crawlbot -> IO (Maybe Response)
+crawlbotP token p crawl =
+    bot p crawl [("token", Just token)]
+
+
+bot :: (Request a, FromJSON b) =>
+     Maybe Proxy -> a -> [(String, Maybe String)] -> IO (Maybe b)
+bot p request query =
+    withSocketsDo . either throwIO bot' $ mkHttpRequest p req
+  where
+    req = appendQuery query $ toReq request
+
+
+bot' ::  FromJSON b => Http.Request -> IO (Maybe b)
+bot' req =
     withManager $ \manager -> do
         response <- http req manager
         decode <$> (responseBody response $$+- CB.sinkLbs)
 
 
-mkHttpRequest :: Request a => String -> String -> a
-              -> Either HttpException Http.Request
-mkHttpRequest token url request = do
+mkHttpRequest :: Maybe Proxy -> Req -> Either HttpException Http.Request
+mkHttpRequest p (Req {..}) = do
     httpRequest <- parseUrl u
-    return $ addContent reqContent httpRequest { responseTimeout = Nothing }
+    return $ addContent reqContent httpRequest { responseTimeout = Nothing
+                                               , proxy           = p
+                                               }
   where
-    Req {..} = toReq request
     u     = reqApi ++ BC.unpack query
-    query = renderQuery True . toQuery $ [ ("token", Just token)
-                                         , ("url",   Just url)
-                                         ] ++ reqQuery
+    query = renderQuery True $ toQuery reqQuery
 
 
 addContent :: Maybe Content -> Http.Request -> Http.Request

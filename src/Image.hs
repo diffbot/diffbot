@@ -1,6 +1,7 @@
 module Image where
 
 import Data.Default
+import Data.Maybe
 
 import Types
 
@@ -31,7 +32,9 @@ instance Default Image where
 instance Request Image where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/image"
                   , reqContent = Nothing
-                  , reqQuery   = fieldsQuery r ++ timeoutQuery r
+                  , reqQuery   = catMaybes [ fieldsQuery r
+                                           , timeoutQuery r
+                                           ]
                   }
 
 

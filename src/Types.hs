@@ -20,17 +20,29 @@ data Req = Req
     }
 
 
--- FIXME: think about queries with key but without value
-mkQuery :: String -> Maybe String -> [(String, Maybe String)]
-mkQuery _ Nothing = []
-mkQuery k v       = [(k, v)]
+appendQuery :: [(String, Maybe String)] -> Req -> Req
+appendQuery query req = req { reqQuery = query ++ reqQuery req }
+
+
+mkQuery :: String -> Maybe String -> Maybe (String, Maybe String)
+mkQuery k v = do
+    v' <- v
+    return (k, Just v')
+
+
+mkQueryBool :: String -> Bool -> Maybe (String, Maybe String)
+mkQueryBool k b = if b then Just (k, Nothing) else Nothing
+
+
+mkQueryFalse :: String -> Bool -> Maybe (String, Maybe String)
+mkQueryFalse k b = if b then Nothing else Just (k, Just "0")
 
 
 -- | Used to control which fields are returned by the API.
 class Fields a where
     fields :: a -> Maybe String
     setFields :: Maybe String -> a -> a
-    fieldsQuery :: a -> [(String, Maybe String)]
+    fieldsQuery :: a -> Maybe (String, Maybe String)
     fieldsQuery a = mkQuery "fields" $ fields a
 
 
@@ -42,7 +54,7 @@ class Post a where
 class Timeout a where
     timeout :: a -> Maybe Int
     setTimeout :: Maybe Int -> a -> a
-    timeoutQuery :: a -> [(String, Maybe String)]
+    timeoutQuery :: a -> Maybe (String, Maybe String)
     timeoutQuery a = mkQuery "timeout" $ show <$> timeout a
 
 
