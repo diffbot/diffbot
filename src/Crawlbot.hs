@@ -1,22 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE Rank2Types #-}
-{-# LANGUAGE TupleSections #-}
 
 module Crawlbot where
 
-import Control.Applicative
-import Control.Monad
-import Data.List
-import Data.Maybe
-import Data.Time.Clock
-import Data.Time.Clock.POSIX
+import           Control.Applicative
+import           Control.Monad
+import qualified Data.ByteString.Char8 as BC
+import           Data.List
+import           Data.Maybe
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 
-import Data.Aeson
+import           Data.Aeson
+import           Network.HTTP.Types.QueryLike
+import           Network.HTTP.Types.URI
 
 import Types
 
---data Crawlbot = forall a. Request a => Crawlbot
 data Crawlbot = Crawlbot
     { crawlbotName               :: String
     -- ^ Job name. This should be a unique identifier and can be used
@@ -25,7 +25,7 @@ data Crawlbot = Crawlbot
     -- ^ Seed URL(s). By default Crawlbot will spider subdomains
     -- (e.g., a seed URL of <http://www.diffbot.com> will include URLs
     -- at <http://blog.diffbot.com>).
---    , crawlbotApi                :: Request a => Maybe a
+    , crawlbotApi                :: Maybe Req
     -- ^ Diffbot API through which to process pages. E.g., 'Article'
     -- to process matching links via the Article API.
 
@@ -84,6 +84,7 @@ mkCrawlbotQuery :: Crawlbot -> [(String, Maybe String)]
 mkCrawlbotQuery (Crawlbot {..}) =
     catMaybes [ mkQuery      "name"               (Just crawlbotName)
               , mkQuery      "seeds"              (unwords <$> crawlbotSeeds)
+              , mkQueryApi   "apiUrl"             crawlbotApi
               , mkQueryLimit "urlCrawl"           crawlbotUrlCrawlLimit
               , mkQueryLimit "urlProcess"         crawlbotUrlProcessLimit
               , mkQuery      "pageProcessPattern" (unpatternStrings <$> crawlbotPageProcessPattern)
@@ -97,6 +98,12 @@ mkCrawlbotQuery (Crawlbot {..}) =
               , mkQueryFalse "onlyProcessIfNew"   crawlbotOnlyProcessIfNew
 --              , mkQuery      "maxRounds"          (Just $ show crawlbotMaxRounds)  -- test with Nothing when change
               ]
+
+
+mkQueryApi :: String -> Maybe Req -> Maybe (String, Maybe String)
+mkQueryApi name req = mkQuery name (f <$> req)
+  where
+    f a = reqApi a ++ (BC.unpack . renderQuery True . toQuery $ reqQuery a)
 
 
 mkQueryLimit :: String -> Maybe Limit -> Maybe (String, Maybe String)
@@ -262,7 +269,7 @@ mkCrawlbot :: String      -- ^ Job name.
 mkCrawlbot name seeds =
     Crawlbot { crawlbotName               = name
              , crawlbotSeeds              = seeds
---             , crawlbotApi                = Nothing
+             , crawlbotApi                = Nothing
              , crawlbotUrlCrawlLimit      = Nothing
              , crawlbotUrlProcessLimit    = Nothing
              , crawlbotPageProcessPattern = Nothing

@@ -90,7 +90,6 @@ module Diffbot
 import           Control.Applicative
 import           Control.Exception (throwIO)
 import qualified Data.ByteString.Char8 as BC
-import qualified Data.ByteString.Lazy as BL
 import           Data.String
 
 import           Data.Aeson
@@ -110,7 +109,6 @@ import           Image
 import           Product
 import           Classifier
 import           Crawlbot
-
 
 
 -- | The 'Object' type contains JSON objects:

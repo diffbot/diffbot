@@ -41,20 +41,19 @@ tests = [ testGroup "Article"
           [ testCase "getIsJust" $ getIsJust mkProduct
           , testCase "emptyToken" $ emptyToken mkProduct
           ]
-        ,
-          testGroup "Classifier"
+        , testGroup "Classifier"
           [ testCase "getIsJust" $ getIsJust mkClassifier
           , testCase "emptyToken" $ emptyToken mkClassifier
           ]
         , testGroup "Crawlbot"
-          [ testCase "crawlIsJust" $ crawlIsJust (mkCrawlbot "sampleDiffbotCrawl" Nothing) -- ["http://blog.diffbot.com"])
+          [ testCase "crawlIsJust" $ crawlIsJust (mkCrawlbot "sampleDiffbotCrawl" Nothing)
+          , testCase "crawlApiUrl" crawlApiUrl
           ]
         ]
 
 
 token, url :: String
---token = "11111111111111111111111111111111"
-token = "1405030fcd9385c3f907472839205908"
+token = "11111111111111111111111111111111"
 url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
 
 
@@ -87,10 +86,17 @@ emptyToken req = do
                    assertBool "Another exception" $ statusCode s == 401)
 
 
-crawlIsJust :: Crawlbot -> IO ()
+crawlIsJust :: Crawlbot -> Assertion
 crawlIsJust mk = do
     resp <- crawlbot token mk
     assertBool "Nothing" $ isJust resp
+
+
+crawlApiUrl :: Assertion
+crawlApiUrl = let c = mkCrawlbot "sampleDiffbotCrawl"
+                                 (Just ["http://blog.diffbot.com"])
+                  a = setFields (Just "querystring,meta") mkArticle
+              in crawlIsJust c { crawlbotApi = Just $ toReq a }
 
 
 html :: BL.ByteString
