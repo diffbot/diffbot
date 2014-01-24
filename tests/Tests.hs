@@ -3,6 +3,7 @@
 module Main where
 
 import qualified Control.Exception as E
+import           Data.List
 import           Data.Maybe
 import qualified Data.ByteString.Lazy as BL
 
@@ -48,6 +49,7 @@ tests = [ testGroup "Article"
         , testGroup "Crawlbot"
           [ testCase "crawlIsJust" $ crawlIsJust (mkCrawlbot "sampleDiffbotCrawl" Nothing)
           , testCase "crawlApiUrl" crawlApiUrl
+          , testCase "crawlCommand" crawlCommand
           ]
         ]
 
@@ -97,6 +99,39 @@ crawlApiUrl = let c = mkCrawlbot "sampleDiffbotCrawl"
                                  (Just ["http://blog.diffbot.com"])
                   a = setFields (Just "querystring,meta") mkArticle
               in crawlIsJust c { crawlbotApi = Just $ toReq a }
+
+
+crawlCommand :: Assertion
+crawlCommand = do
+    let name = "testCrawl"
+        c = mkCrawlbot name $ Just ["http://blog.diffbot.com"]
+    resp <- crawlbot token c
+    assertBool "Create: no response." $ isJust resp
+    crawlCommand' name Pause
+    crawlCommand' name Resume
+    crawlCommand' name Delete
+
+
+crawlCommand' :: String -> Action -> Assertion
+crawlCommand' name action = do
+    let com = Command name action
+    resp <- crawlbotC token com
+    assertBool (show action ++ ": no response.") $ isJust resp
+    let r = fromJust resp
+    case action of
+      Pause  -> crawlJobStatus r (== 6)
+      Resume -> crawlJobStatus r (/= 6)
+      Delete -> crawlNoJobs    r
+      _      -> return ()
+  where
+    crawlJobStatus resp test = do
+      assertBool (show action ++ ": no jobs.") $ isJust (responseJobs resp)
+      let job = find (\j -> jobName j == name) . fromJust $ responseJobs resp
+      assertBool (show action ++ ": no such job.") $ isJust job
+      assertBool (show action ++ ": wrong status code.") $ test . jobStatusCode . jobStatus $ fromJust job
+
+    crawlNoJobs resp = do
+      assertBool (show action ++ ": unexpected response") $ isNothing (responseJobs resp)
 
 
 html :: BL.ByteString

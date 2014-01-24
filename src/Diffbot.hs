@@ -69,9 +69,15 @@ module Diffbot
     -- * Crawlbot
     , crawlbot
     , crawlbotP
+    , crawlbotC
     , Crawlbot(..)
     , mkCrawlbot
     , Limit(..)
+    , Response(..)
+    , Job(..)
+    , JobStatus(..)
+    , Command(..)
+    , Action(..)
     -- * Type classes
     , Fields(..)
     , Post(..)
@@ -162,6 +168,11 @@ crawlbot token crawl =
 crawlbotP :: String -> Maybe Proxy -> Crawlbot -> IO (Maybe Response)
 crawlbotP token p crawl =
     bot p crawl [("token", Just token)]
+
+
+crawlbotC :: String -> Command -> IO (Maybe Response)
+crawlbotC token command =
+    bot Nothing command [("token", Just token)]
 
 
 bot :: (Request a, FromJSON b) =>

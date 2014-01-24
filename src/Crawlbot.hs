@@ -42,10 +42,10 @@ data Crawlbot = Crawlbot
     , crawlbotMaxToProcess       :: Maybe Int
     -- ^ Specify max pages to process through Diffbot APIs. Default:
     -- 10,000.
-    , crawlbotRestrictDomain     :: Bool
+    , crawlbotRestrictDomain     :: Maybe Bool
     -- ^ By default crawls will restrict to subdomains within the seed
-    -- URL domain. Specify to 'False' to follow all links regardless
-    -- of domain.
+    -- URL domain. Specify to 'Just False' to follow all links
+    -- regardless of domain.
     , crawlbotNotifyEmail        :: Maybe String
     -- ^ Send a message to this email address when the crawl hits the
     -- 'crawlbotMaxToCrawl' or 'crawlbotMaxToProcess' limit, or when
@@ -63,13 +63,13 @@ data Crawlbot = Crawlbot
     -- ^ Specify the number of days as a floating-point
     -- (e.g. crawlbotRepeat=7.0) to repeat this crawl. By default
     -- crawls will not be repeated.
-    , crawlbotOnlyProcessIfNew   :: Bool
+    , crawlbotOnlyProcessIfNew   :: Maybe Bool
     -- ^ By default repeat crawls will only process new (previously
-    -- unprocessed) pages. Set to 'False' to process all content on
-    -- repeat crawls.
-    , crawlbotMaxRounds          :: Int
-    -- ^ Specify the maximum number of crawl repeats. Use '-1' to
-    -- continually repeat.
+    -- unprocessed) pages. Set to 'Just False' to process all content
+    -- on repeat crawls.
+    , crawlbotMaxRounds          :: Maybe Int
+    -- ^ Specify the maximum number of crawl repeats. By default
+    -- repeating crawls will continue indefinitely.
     }
 
 
@@ -90,13 +90,13 @@ mkCrawlbotQuery (Crawlbot {..}) =
               , mkQuery      "pageProcessPattern" (unpatternStrings <$> crawlbotPageProcessPattern)
               , mkQuery      "maxToCrawl"         (show <$> crawlbotMaxToCrawl)
               , mkQuery      "maxToProcess"       (show <$> crawlbotMaxToProcess)
-              , mkQueryFalse "restrictDomain"     crawlbotRestrictDomain
-              , mkQuery      "notifyEmail" crawlbotNotifyEmail
+              , mkQuery      "restrictDomain"     (show . fromEnum <$> crawlbotRestrictDomain)
+              , mkQuery      "notifyEmail"        crawlbotNotifyEmail
               , mkQuery      "notifyWebHook"      crawlbotNotifyWebHook
               , mkQuery      "crawlDelay"         (show <$> crawlbotDelay)
               , mkQuery      "repeat"             (show <$> crawlbotRepeat)
-              , mkQueryFalse "onlyProcessIfNew"   crawlbotOnlyProcessIfNew
---              , mkQuery      "maxRounds"          (Just $ show crawlbotMaxRounds)  -- test with Nothing when change
+              , mkQuery      "onlyProcessIfNew"   (show . fromEnum <$> crawlbotOnlyProcessIfNew)
+              , mkQuery      "maxRounds"          (show <$> crawlbotMaxRounds)
               ]
 
 
@@ -145,20 +145,20 @@ data Limit
 
 data Response = Response
     { responseString :: Maybe String
-    , responseJobs   :: [Job]
+    , responseJobs   :: Maybe [Job]
     } deriving Show
 
 
 instance FromJSON Response where
     parseJSON (Object v) = Response <$> v .:? "response"
-                                    <*> v .:  "jobs"
+                                    <*> v .:? "jobs"
     parseJSON _          = mzero
 
 
 data Job = Job
     { jobName                 :: String
     , jobType                 :: String
-    , jobStatus               :: Status
+    , jobStatus               :: JobStatus
     , jobSentDoneNotification :: Int
     , jobObjectsFound         :: Int
     , jobUrlsHarvested        :: Int
@@ -231,15 +231,15 @@ toTime :: Double -> UTCTime
 toTime = posixSecondsToUTCTime . realToFrac
 
 
-data Status = Status
-    { statusCode    :: Int
-    , statusMessage :: String
+data JobStatus = JobStatus
+    { jobStatusCode    :: Int
+    , jobStatusMessage :: String
     } deriving Show
 
 
-instance FromJSON Status where
-    parseJSON (Object v) = Status <$> v .: "status"
-                                  <*> v .: "message"
+instance FromJSON JobStatus where
+    parseJSON (Object v) = JobStatus <$> v .: "status"
+                                     <*> v .: "message"
     parseJSON _          = mzero
 
 
@@ -249,6 +249,23 @@ data Command = Command
     , commandAction :: Action
     -- ^ Action to execute.
     }
+
+
+instance Request Command where
+    toReq a = Req { reqApi     = "http://api.diffbot.com/v2/crawl"
+                  , reqContent = Nothing
+                  , reqQuery   = mkCommandQuery a
+                  }
+
+
+mkCommandQuery :: Command -> [(String, Maybe String)]
+mkCommandQuery (Command{..}) = [("name", Just commandName), action]
+  where
+    action = case commandAction of
+               Pause   -> ("pause",   Just "1")
+               Resume  -> ("pause",   Just "0")
+               Restart -> ("restart", Just "1")
+               Delete  -> ("delete",  Just "1")
 
 
 data Action
@@ -261,6 +278,7 @@ data Action
     | Restart
     -- | Delete a crawl, and all associated data, completely.
     | Delete
+      deriving Show
 
 
 mkCrawlbot :: String      -- ^ Job name.
@@ -275,11 +293,11 @@ mkCrawlbot name seeds =
              , crawlbotPageProcessPattern = Nothing
              , crawlbotMaxToCrawl         = Nothing
              , crawlbotMaxToProcess       = Nothing
-             , crawlbotRestrictDomain     = True
+             , crawlbotRestrictDomain     = Nothing
              , crawlbotNotifyEmail        = Nothing
              , crawlbotNotifyWebHook      = Nothing
              , crawlbotDelay              = Nothing
              , crawlbotRepeat             = Nothing
-             , crawlbotOnlyProcessIfNew   = True
-             , crawlbotMaxRounds          = (-1)
+             , crawlbotOnlyProcessIfNew   = Nothing
+             , crawlbotMaxRounds          = Nothing
              }
