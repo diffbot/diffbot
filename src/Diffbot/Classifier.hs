@@ -1,8 +1,8 @@
-module Classifier where
+module Diffbot.Classifier where
 
 import Data.Maybe
 
-import Types
+import Diffbot.Types
 
 data Classifier = Classifier
     { classifierFields :: Maybe String
@@ -30,8 +30,8 @@ mkClassifierQuery a = catMaybes [ fieldsQuery a
                                 ]
 
 
-mkClassifier :: Classifier
-mkClassifier = Classifier { classifierFields = Nothing
-                          , classifierMode   = Nothing
-                          , classifierStats  = False
-                          }
+defClassifier :: Classifier
+defClassifier = Classifier { classifierFields = Nothing
+                           , classifierMode   = Nothing
+                           , classifierStats  = False
+                           }

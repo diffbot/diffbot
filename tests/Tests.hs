@@ -7,14 +7,13 @@ import           Data.List
 import           Data.Maybe
 import qualified Data.ByteString.Lazy as BL
 
---import           Data.Default
 import           Test.Framework
 import           Test.Framework.Providers.HUnit
 import           Test.HUnit hiding (Test, path)
 import           Network.HTTP.Types.Status
 
 import Diffbot
-
+import Diffbot.Crawlbot
 
 main :: IO ()
 main = defaultMain tests
@@ -22,46 +21,47 @@ main = defaultMain tests
 
 tests :: [Test]
 tests = [ testGroup "Article"
-          [ testCase "getIsJust" $ getIsJust mkArticle
-          , testCase "postPlainIsJust" $ postPlainIsJust mkArticle
-          , testCase "postHtmlIsJust" $ postHtmlIsJust mkArticle
-          , testCase "emptyToken" $ emptyToken mkArticle
+          [ testCase "getIsJust" $ getIsJust defArticle
+          , testCase "postPlainIsJust" $ postPlainIsJust defArticle
+          , testCase "postHtmlIsJust" $ postHtmlIsJust defArticle
+          , testCase "emptyToken" $ emptyToken defArticle
           ]
         , testGroup "FrontPage"
-          [ testCase "getIsJust" (getIsJust mkFrontPage)
+          [ testCase "getIsJust" (getIsJust defFrontPage)
           --  FIXME: POST request for FrontPage API
-          -- , testCase "postPlainIsJust" (postPlainIsJust mkFrontPage)
-          -- , testCase "postHtmlIsJust" (postHtmlIsJust mkFrontPage)
-          , testCase "emptyToken" $ emptyToken mkFrontPage
+          -- , testCase "postPlainIsJust" (postPlainIsJust defFrontPage)
+          -- , testCase "postHtmlIsJust" (postHtmlIsJust defFrontPage)
+          , testCase "emptyToken" $ emptyToken defFrontPage
+          , testCase "allIsJust" (getIsJust defFrontPage { frontPageAll = True })
           ]
         , testGroup "Image"
-          [ testCase "getIsJust" (getIsJust mkImage)
-          , testCase "emptyToken" $ emptyToken mkImage
+          [ testCase "getIsJust" (getIsJust defImage)
+          , testCase "emptyToken" $ emptyToken defImage
           ]
         , testGroup "Product"
-          [ testCase "getIsJust" $ getIsJust mkProduct
-          , testCase "emptyToken" $ emptyToken mkProduct
+          [ testCase "getIsJust" $ getIsJust defProduct
+          , testCase "emptyToken" $ emptyToken defProduct
           ]
         , testGroup "Classifier"
-          [ testCase "getIsJust" $ getIsJust mkClassifier
-          , testCase "emptyToken" $ emptyToken mkClassifier
+          [ testCase "getIsJust" $ getIsJust defClassifier
+          , testCase "emptyToken" $ emptyToken defClassifier
           ]
         , testGroup "Crawlbot"
-          [ testCase "crawlIsJust" $ crawlIsJust (mkCrawlbot "sampleDiffbotCrawl" Nothing)
+          [ testCase "crawlCommand" crawlCommand
           , testCase "crawlApiUrl" crawlApiUrl
-          , testCase "crawlCommand" crawlCommand
           ]
         ]
 
 
 token, url :: String
-token = "11111111111111111111111111111111"
+token = "1405030fcd9385c3f907472839205908"
 url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
 
 
 getIsJust :: Request a => a -> Assertion
 getIsJust mk = do
     resp <- diffbot token url mk
+    print resp
     assertBool "Nothing" $ isJust resp
 
 
@@ -88,50 +88,54 @@ emptyToken req = do
                    assertBool "Another exception" $ statusCode s == 401)
 
 
-crawlIsJust :: Crawlbot -> Assertion
-crawlIsJust mk = do
-    resp <- crawlbot token mk
-    assertBool "Nothing" $ isJust resp
-
-
 crawlApiUrl :: Assertion
-crawlApiUrl = let c = mkCrawlbot "sampleDiffbotCrawl"
-                                 (Just ["http://blog.diffbot.com"])
-                  a = setFields (Just "querystring,meta") mkArticle
-              in crawlIsJust c { crawlbotApi = Just $ toReq a }
+crawlApiUrl = let c = defCrawl "sampleDiffbotCrawl"
+                                  ["http://blog.diffbot.com"]
+                  a = setFields (Just "querystring,meta") defArticle
+              in crawlCommand' (Create c { crawlApi = Just $ toReq a }) (assertResp "Create")
 
 
 crawlCommand :: Assertion
 crawlCommand = do
     let name = "testCrawl"
-        c = mkCrawlbot name $ Just ["http://blog.diffbot.com"]
-    resp <- crawlbot token c
-    assertBool "Create: no response." $ isJust resp
-    crawlCommand' name Pause
-    crawlCommand' name Resume
-    crawlCommand' name Delete
-
-
-crawlCommand' :: String -> Action -> Assertion
-crawlCommand' name action = do
-    let com = Command name action
-    resp <- crawlbotC token com
-    assertBool (show action ++ ": no response.") $ isJust resp
-    let r = fromJust resp
-    case action of
-      Pause  -> crawlJobStatus r (== 6)
-      Resume -> crawlJobStatus r (/= 6)
-      Delete -> crawlNoJobs    r
-      _      -> return ()
+        c = defCrawl name ["http://blog.diffbot.com"]
+    crawlCommand' (Create c)    (assertResp "Create")
+    crawlCommand' List          (assertJobs "List")
+    crawlCommand' (Show name)   (assertJob "Show" name)
+    crawlCommand' (Pause name)  (assertJobStatus "Pause" name (== 6))
+    crawlCommand' (Resume name) (assertJobStatus "Resume" name (/= 6))
+    crawlCommand' (Delete name) (assertNoJobs "Delete")
   where
-    crawlJobStatus resp test = do
-      assertBool (show action ++ ": no jobs.") $ isJust (responseJobs resp)
-      let job = find (\j -> jobName j == name) . fromJust $ responseJobs resp
-      assertBool (show action ++ ": no such job.") $ isJust job
-      assertBool (show action ++ ": wrong status code.") $ test . jobStatusCode . jobStatus $ fromJust job
+    assertJobs c resp = do
+      assertResp c resp
+      let r = fromJust resp
+      assertBool (c ++ ": no jobs.") $ isJust (responseJobs r)
+      assertBool (c ++ ": empty jobs list.") ((/= 0) . length . fromJust $ responseJobs r)
 
-    crawlNoJobs resp = do
-      assertBool (show action ++ ": unexpected response") $ isNothing (responseJobs resp)
+    assertJob c name resp = do
+      assertJobs c resp
+      assertEqual (c ++ ": wrong job name.") name (jobName . head . fromJust . responseJobs $ fromJust resp)
+
+    assertJobStatus c name test resp = do
+      assertJobs c resp
+      let job = find (\j -> jobName j == name) . fromJust $ responseJobs $ fromJust resp
+      assertBool (c ++ ": no such job.") $ isJust job
+      assertBool (c ++ ": wrong status code.") $ test . jobStatusCode . jobStatus $ fromJust job
+
+    assertNoJobs c resp = do
+      assertResp c resp
+      assertBool (c ++ ": unexpected response") $ isNothing (responseJobs $ fromJust resp)
+
+
+assertResp :: String -> Maybe a -> Assertion
+assertResp c resp = do
+    assertBool (c ++ ": no response.") $ isJust resp
+
+
+crawlCommand' :: Command -> (Maybe Response -> Assertion) -> Assertion
+crawlCommand' com assertion = do
+    resp <- crawlbot token com
+    assertion resp
 
 
 html :: BL.ByteString

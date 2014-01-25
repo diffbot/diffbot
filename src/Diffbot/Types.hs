@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Types where
+module Diffbot.Types where
 
 import           Control.Applicative
 import qualified Data.ByteString.Lazy as BL
@@ -42,8 +42,9 @@ mkQueryFalse k b = if b then Nothing else Just (k, Just "0")
 class Fields a where
     fields :: a -> Maybe String
     setFields :: Maybe String -> a -> a
-    fieldsQuery :: a -> Maybe (String, Maybe String)
-    fieldsQuery a = mkQuery "fields" $ fields a
+
+fieldsQuery :: Fields a => a -> Maybe (String, Maybe String)
+fieldsQuery a = mkQuery "fields" $ fields a
 
 
 class Post a where
@@ -54,8 +55,10 @@ class Post a where
 class Timeout a where
     timeout :: a -> Maybe Int
     setTimeout :: Maybe Int -> a -> a
-    timeoutQuery :: a -> Maybe (String, Maybe String)
-    timeoutQuery a = mkQuery "timeout" $ show <$> timeout a
+
+
+timeoutQuery :: Timeout a => a -> Maybe (String, Maybe String)
+timeoutQuery a = mkQuery "timeout" $ show <$> timeout a
 
 
 data Content = Content

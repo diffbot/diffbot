@@ -1,9 +1,8 @@
-module Image where
+module Diffbot.Image where
 
-import Data.Default
 import Data.Maybe
 
-import Types
+import Diffbot.Types
 
 
 -- | Analyzes a web page and returns its primary image(s).
@@ -23,12 +22,6 @@ instance Timeout Image where
     setTimeout t i = i { imageTimeout = t }
 
 
-instance Default Image where
-    def = Image { imageFields  = Nothing
-                , imageTimeout = Nothing
-                }
-
-
 instance Request Image where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/image"
                   , reqContent = Nothing
@@ -38,5 +31,7 @@ instance Request Image where
                   }
 
 
-mkImage :: Image
-mkImage = def
+defImage :: Image
+defImage = Image { imageFields  = Nothing
+                 , imageTimeout = Nothing
+                 }

@@ -1,9 +1,8 @@
-module FrontPage where
+module Diffbot.FrontPage where
 
-import Data.Default
 import Data.Maybe
 
-import Types
+import Diffbot.Types
 
 -- | Takes in a multifaceted \"homepage\" and returns individual page
 -- elements.
@@ -13,6 +12,9 @@ data FrontPage = FrontPage
     -- similar links that the Diffbot visual processing engine
     -- considers less important/non-core.
     , frontPageContent :: Maybe Content
+    , frontPageTimeout :: Maybe Int
+    -- ^ Specify a value in milliseconds to override the default API
+    -- timeout of 5000ms.
     }
 
 
@@ -21,10 +23,9 @@ instance Post FrontPage where
     setContent c f = f { frontPageContent = c }
 
 
-instance Default FrontPage where
-    def = FrontPage { frontPageAll     = False
-                    , frontPageContent = Nothing
-                    }
+instance Timeout FrontPage where
+    timeout        = frontPageTimeout
+    setTimeout t f = f { frontPageTimeout = t }
 
 
 instance Request FrontPage where
@@ -37,8 +38,12 @@ instance Request FrontPage where
 mkFrontPageQuery :: FrontPage -> [(String, Maybe String)]
 mkFrontPageQuery f = catMaybes [ mkQueryBool "all"    (frontPageAll f)
                                , mkQuery     "format" (Just "json")
+                               , timeoutQuery f
                                ]
 
 
-mkFrontPage :: FrontPage
-mkFrontPage = def
+defFrontPage :: FrontPage
+defFrontPage = FrontPage { frontPageAll     = False
+                         , frontPageContent = Nothing
+                         , frontPageTimeout = Nothing
+                         }

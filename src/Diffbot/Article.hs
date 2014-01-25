@@ -1,9 +1,8 @@
-module Article where
+module Diffbot.Article where
 
-import Data.Default
 import Data.Maybe
 
-import Types
+import Diffbot.Types
 
 
 -- | Used to extract clean article text from news article, blog post
@@ -35,13 +34,6 @@ instance Timeout Article where
     setTimeout t a = a { articleTimeout = t }
 
 
-instance Default Article where
-    def = Article { articleContent  = Nothing
-                  , articleFields   = Nothing
-                  , articleTimeout  = Nothing
-                  }
-
-
 instance Request Article where
     toReq r = Req { reqApi     = "http://api.diffbot.com/v2/article"
                   , reqContent = content r
@@ -51,5 +43,8 @@ instance Request Article where
                   }
 
 
-mkArticle :: Article
-mkArticle = def
+defArticle :: Article
+defArticle = Article { articleContent  = Nothing
+                     , articleFields   = Nothing
+                     , articleTimeout  = Nothing
+                     }

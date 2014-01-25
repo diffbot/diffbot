@@ -1,7 +1,8 @@
-module Product where
+module Diffbot.Product where
 
-import Types
 import Data.Maybe
+
+import Diffbot.Types
 
 -- | Analyzes a shopping or e-commerce product page and returns
 -- information on the product.
@@ -30,7 +31,7 @@ instance Request Product where
                   }
 
 
-mkProduct :: Product
-mkProduct = Product { productFields  = Nothing
-                    , productTimeout = Nothing
-                    }
+defProduct :: Product
+defProduct = Product { productFields  = Nothing
+                     , productTimeout = Nothing
+                     }

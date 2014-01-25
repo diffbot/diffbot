@@ -1,83 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 
--- | Some examples:
---
--- > -- Just download information about the primary article content on the
--- > -- submitted page.
--- > import Diffbot
--- >
--- > main = do
--- >     let token = "11111111111111111111111111111111"
--- >         url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
--- >         req   = mkArticle token url
--- >     resp <- diffbot req
--- >     print resp
---
--- > -- You can control which fields are returned:
--- > import Diffbot
--- >
--- > main = do
--- >     let token = "11111111111111111111111111111111"
--- >         url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
--- >         req   = mkArticle token url
--- >         f     = Just "meta,querystring,images(*)"
--- >     resp <- diffbot $ setFields f req
--- >     print resp
---
--- > -- If your content is not publicly available (e.g., behind a
--- > -- firewall), you can POST markup for analysis directly:
--- > {-# LANGUAGE OverloadedStrings #-}
--- >
--- > import Diffbot
--- >
--- > main = do
--- >     let token = "11111111111111111111111111111111"
--- >         url   = "http://www.diffbot.com/our-apis/article"
--- >         -- Please note that the 'url' parameter is still required, and
--- >         -- will be used to resolve any relative links contained in the
--- >         -- markup.
--- >         req   = mkArticle token url
--- >         c     = Content TextPlain "Now is the time for all good robots to come to the aid of their -- oh never mind, run!"
--- >     resp <- diffbot $ setContent (Just c) req
--- >     print resp
-
 
 module Diffbot
-    ( -- * Perform a request
+    (
+    -- * Examples
+    -- $examples
+
+    -- * Perform a request
       diffbot
-    , diffbotP
     -- * API
     -- ** Article
-    , Article
-    , mkArticle
+    , Article(..)
+    , defArticle
     -- ** Front Page
-    , FrontPage
-    , mkFrontPage
-    , frontPageAll
+    , FrontPage(..)
+    , defFrontPage
     -- ** Image
-    , Image
-    , mkImage
+    , Image(..)
+    , defImage
     -- ** Product
-    , Product
-    , mkProduct
+    , Product(..)
+    , defProduct
     -- ** Page Classifier
-    , Classifier
-    , mkClassifier
-    , classifierMode
-    , classifierStats
-    -- * Crawlbot
-    , crawlbot
-    , crawlbotP
-    , crawlbotC
-    , Crawlbot(..)
-    , mkCrawlbot
-    , Limit(..)
-    , Response(..)
-    , Job(..)
-    , JobStatus(..)
-    , Command(..)
-    , Action(..)
+    , Classifier(..)
+    , defClassifier
     -- * Type classes
     , Fields(..)
     , Post(..)
@@ -85,7 +32,6 @@ module Diffbot
     -- * Datatypes
     , Content(..)
     , ContentType(..)
-    , Proxy(..)
     -- * Internal
     , Request(..)
     , Req(..)
@@ -93,36 +39,23 @@ module Diffbot
     , HttpException(..)
     ) where
 
-import           Control.Applicative
-import           Control.Exception (throwIO)
-import qualified Data.ByteString.Char8 as BC
-import           Data.String
+import Data.Aeson
+import Network.HTTP.Conduit (HttpException(..))
 
-import           Data.Aeson
-import           Data.Conduit
-import qualified Data.Conduit.Binary as CB
-import           Network (withSocketsDo)
-import qualified Network.HTTP.Conduit as Http (Request, method)
-import           Network.HTTP.Conduit hiding (Request, Response, method)
-import           Network.HTTP.Types.Header
-import           Network.HTTP.Types.QueryLike
-import           Network.HTTP.Types.URI
-
-import           Types
-import           Article
-import           FrontPage
-import           Image
-import           Product
-import           Classifier
-import           Crawlbot
+import Diffbot.Types
+import Diffbot.Internal
+import Diffbot.Article
+import Diffbot.FrontPage
+import Diffbot.Image
+import Diffbot.Product
+import Diffbot.Classifier
 
 
 -- | The 'Object' type contains JSON objects:
 --
 -- >>> let token = "11111111111111111111111111111111"
 -- >>> let url = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
--- >>> let req = mkArticle token url
--- >>> Just resp <- diffbot req
+-- >>> Just resp <- diffbot token url defaultArticle
 -- >>> resp
 -- fromList [("author",String "John Davi"),("title",String "Diffbot\8217s New Product API Teaches Robots to Shop Online"),...
 --
@@ -143,71 +76,43 @@ diffbot :: Request a
         -> a          -- ^ API
         -> IO (Maybe Object)
 diffbot token url request =
-    bot Nothing request [ ("token", Just token)
-                        , ("url",   Just url)
-                        ]
+    bot request [ ("token", Just token)
+                , ("url",   Just url)
+                ]
 
-
-diffbotP :: Request a
-         => String     -- ^ Developer token.
-         -> String     -- ^ URL to process.
-         -> Maybe Proxy
-         -> a          -- ^ API
-         -> IO (Maybe Object)
-diffbotP token url p request =
-    bot p request [ ("token", Just token)
-                  , ("url",   Just url)
-                  ]
-
-
-crawlbot :: String -> Crawlbot -> IO (Maybe Response)
-crawlbot token crawl =
-    bot Nothing crawl [("token", Just token)]
-
-
-crawlbotP :: String -> Maybe Proxy -> Crawlbot -> IO (Maybe Response)
-crawlbotP token p crawl =
-    bot p crawl [("token", Just token)]
-
-
-crawlbotC :: String -> Command -> IO (Maybe Response)
-crawlbotC token command =
-    bot Nothing command [("token", Just token)]
-
-
-bot :: (Request a, FromJSON b) =>
-     Maybe Proxy -> a -> [(String, Maybe String)] -> IO (Maybe b)
-bot p request query =
-    withSocketsDo . either throwIO bot' $ mkHttpRequest p req
-  where
-    req = appendQuery query $ toReq request
-
-
-bot' ::  FromJSON b => Http.Request -> IO (Maybe b)
-bot' req =
-    withManager $ \manager -> do
-        response <- http req manager
-        decode <$> (responseBody response $$+- CB.sinkLbs)
-
-
-mkHttpRequest :: Maybe Proxy -> Req -> Either HttpException Http.Request
-mkHttpRequest p (Req {..}) = do
-    httpRequest <- parseUrl u
-    return $ addContent reqContent httpRequest { responseTimeout = Nothing
-                                               , proxy           = p
-                                               }
-  where
-    u     = reqApi ++ BC.unpack query
-    query = renderQuery True $ toQuery reqQuery
-
-
-addContent :: Maybe Content -> Http.Request -> Http.Request
-addContent m req =
-    case m of
-      Nothing ->
-          req { Http.method =    "GET" }
-      Just (Content {..}) ->
-          req { Http.method    = "POST"
-              , requestHeaders = [(hContentType, fromString $ show contentType)]
-              , requestBody    = RequestBodyLBS contentData
-              }
+-- $examples
+--
+-- Just download information about the primary article content on the
+-- submitted page:
+--
+-- > import Diffbot
+-- >
+-- > main = do
+-- >     let token = "11111111111111111111111111111111"
+-- >         url   = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
+-- >     resp <- diffbot token url defaultArticle
+-- >     print resp
+--
+-- You can control which fields are returned:
+--
+-- > main = do
+-- >     let token  = "11111111111111111111111111111111"
+-- >         url    = "http://blog.diffbot.com/diffbots-new-product-api-teaches-robots-to-shop-online/"
+-- >         fields = Just "meta,querystring,images(*)"
+-- >     resp <- diffbot token url $ setFields fields defaultArticle
+-- >     print resp
+--
+-- If your content is not publicly available (e.g., behind a
+-- firewall), you can POST markup for analysis directly:
+--
+-- > {-# LANGUAGE OverloadedStrings #-}
+-- > import Diffbot
+-- >
+-- > main = do
+-- >     let token   = "11111111111111111111111111111111"
+-- >         url     = "http://www.diffbot.com/our-apis/article"
+-- >         content = Content TextPlain "Now is the time for all good robots to come to the aid of their -- oh never mind, run!"
+-- >     -- Please note that the 'url' is still required, and will be used
+-- >     -- to resolve any relative links contained in the markup.
+-- >     resp <- diffbot token url $ setContent (Just content) defaultArticle
+-- >     print resp
