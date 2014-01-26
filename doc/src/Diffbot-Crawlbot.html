@@ -27,7 +27,7 @@
 <a name="line-18"></a>      <span class='hs-varid'>crawlbot</span>
 <a name="line-19"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Command</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
 <a name="line-20"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Crawl</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
-<a name="line-21"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>defaultCrawl</span>
+<a name="line-21"></a>    <span class='hs-layout'>,</span> <span class='hs-varid'>defCrawl</span>
 <a name="line-22"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Limit</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
 <a name="line-23"></a>    <span class='hs-comment'>-- * Response</span>
 <a name="line-24"></a>    <span class='hs-layout'>,</span> <span class='hs-conid'>Response</span><span class='hs-layout'>(</span><span class='hs-keyglyph'>..</span><span class='hs-layout'>)</span>
@@ -336,10 +336,10 @@
 <a name="line-327"></a>    <span class='hs-varid'>parseJSON</span> <span class='hs-keyword'>_</span>          <span class='hs-keyglyph'>=</span> <span class='hs-varid'>mzero</span>
 <a name="line-328"></a>
 <a name="line-329"></a>
-<a name="line-330"></a><a name="defaultCrawl"></a><span class='hs-definition'>defaultCrawl</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>String</span>      <span class='hs-comment'>-- ^ Crawl name.</span>
-<a name="line-331"></a>             <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>String</span><span class='hs-keyglyph'>]</span>    <span class='hs-comment'>-- ^ Seed URLs.</span>
-<a name="line-332"></a>             <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Crawl</span>
-<a name="line-333"></a><span class='hs-definition'>defaultCrawl</span> <span class='hs-varid'>name</span> <span class='hs-varid'>seeds</span> <span class='hs-keyglyph'>=</span>
+<a name="line-330"></a><a name="defCrawl"></a><span class='hs-definition'>defCrawl</span> <span class='hs-keyglyph'>::</span> <span class='hs-conid'>String</span>      <span class='hs-comment'>-- ^ Crawl name.</span>
+<a name="line-331"></a>         <span class='hs-keyglyph'>-&gt;</span> <span class='hs-keyglyph'>[</span><span class='hs-conid'>String</span><span class='hs-keyglyph'>]</span>    <span class='hs-comment'>-- ^ Seed URLs.</span>
+<a name="line-332"></a>         <span class='hs-keyglyph'>-&gt;</span> <span class='hs-conid'>Crawl</span>
+<a name="line-333"></a><span class='hs-definition'>defCrawl</span> <span class='hs-varid'>name</span> <span class='hs-varid'>seeds</span> <span class='hs-keyglyph'>=</span>
 <a name="line-334"></a>    <span class='hs-conid'>Crawl</span> <span class='hs-layout'>{</span> <span class='hs-varid'>crawlName</span>               <span class='hs-keyglyph'>=</span> <span class='hs-varid'>name</span>
 <a name="line-335"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>crawlSeeds</span>              <span class='hs-keyglyph'>=</span> <span class='hs-varid'>seeds</span>
 <a name="line-336"></a>          <span class='hs-layout'>,</span> <span class='hs-varid'>crawlApi</span>                <span class='hs-keyglyph'>=</span> <span class='hs-conid'>Nothing</span>
