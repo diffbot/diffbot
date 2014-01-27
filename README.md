@@ -1,7 +1,7 @@
-diffbot
+Diffbot API Haskell Client
 =======
 
-Simple client for the [Diffbot](http://diffbot.com) API.
+Simple client for the [Diffbot](http://diffbot.com) API for Haskell.
 
 # Installation
 
@@ -115,3 +115,5 @@ You also can view, pause, restart or delete crawls.
 Please consult [library
 documentation](http://tymmym.github.io/diffbot/doc/index.html) for
 additional information.
+
+-Initial commit by Tim Tych-
